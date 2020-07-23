@@ -19,23 +19,34 @@ import org.robolectric.annotation.Resetter;
  * filling any requested buffers.
  *
  * <p>It is also possible to provide the underlying data by implementing {@link AudioRecordSource}
- * and setting this via {@link #setSource(AudioRecordSource)}.
+ * and setting this via {@link #setSource(AudioRecordSource)}. Note, this uses same instance of
+ * {@link AudioRecordSource} for all {@link AudioRecord} instances.
+ *
+ * <p>It is also possible to provide new instance of {@link AudioRecordSource} per
+ * {@link AudioRecord} instance using {@link #setSourceProvider(Provider<AudioRecordSource)}.
  */
 @Implements(value = AudioRecord.class, minSdk = LOLLIPOP)
 public final class ShadowAudioRecord {
 
   private static final AudioRecordSource DEFAULT_SOURCE = new AudioRecordSource() {};
 
-  private static final AtomicReference<AudioRecordSource> source =
-      new AtomicReference<>(DEFAULT_SOURCE);
+  private static final AtomicReference<Provider<AudioRecordSource>> audioRecordSourceProvider =
+      new AtomicReference<>(() -> DEFAULT_SOURCE);
+
+  private final AtomicReference<AudioRecordSource> source =
+      new AtomicReference<>(audioRecordSourceProvider.get().get());
 
   public static void setSource(AudioRecordSource source) {
-    ShadowAudioRecord.source.set(source);
+    ShadowAudioRecord.audioRecordSourceProvider.set(() -> source);
+  }
+
+  public static void setSourceProvider(Provider<AudioRecordSource> audioRecordSourceProvider) {
+    ShadowAudioRecord.audioRecordSourceProvider.set(audioRecordSourceProvider);
   }
 
   @Resetter
   public static void clearSource() {
-    source.set(DEFAULT_SOURCE);
+    setSource(DEFAULT_SOURCE);
   }
 
   @Implementation
